@@ -1,0 +1,15 @@
+printprocs
+fork Gusty 1 kernel_process
+fork Gusty 2 kernel_process
+fork Gusty 3 Gusty
+printprocs
+#Tests how the program handles processes with the same name.
+#Expected output:
+#procs in queue:
+#pname: kernel_process, pid: 1024, ppid: 1024, priority: 0, state: RUNNABLE
+#
+#procs in queue:
+#pname: kernel_process, pid: 1024, ppid: 1024, priority: 0, state: RUNNABLE
+#pname: Gusty, pid: 1025, ppid: 1024, priority: 1, state: EMBRYO
+#pname: Gusty, pid: 1026, ppid: 1024, priority: 2, state: EMBRYO
+#pname: Gusty, pid: 1027, ppid: 1025, priority: 3, state: EMBRYO

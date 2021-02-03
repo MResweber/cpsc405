@@ -1,0 +1,12 @@
+fork Gusty 5 kernel_process
+printprocs
+kill Gusty
+printprocs
+#test the kill function
+#Expected output:
+#procs in queue:
+#pname: kernel_process, pid: 1024, ppid: 1024, priority: 0, state: RUNNABLE
+#pname: Gusty, pid: 1025, ppid: 1024, priority: 5, state: EMBRYO
+#
+#procs in queue:
+#pname: kernel_process, pid: 1024, ppid: 1024, priority: 0, state: RUNNABLE

@@ -1,0 +1,15 @@
+for Tom 2 Gusty
+printprocs
+Kill Tom
+printprocs
+printpid Tom
+printppid Tom
+#test how the program handles commands pointing to non existant procs.
+#expected output:procs in queue:
+#pname: kernel_process, pid: 1024, ppid: 1024, priority: 0, state: RUNNABLE
+#
+#procs in queue:
+#pname: kernel_process, pid: 1024, ppid: 1024, priority: 0, state: RUNNABLE
+#
+#procname: Tom not found
+#procname: Tom not found
