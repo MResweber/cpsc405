@@ -1,7 +1,7 @@
 #include <stdio.h>
 
 int main(int argc, char **argv) {
-    int nflg, sflg, uflg;
+    int nflg = 0, sflg = 0, uflg = 0;
     int c = 0;
     for( ; argc>1 && argv[1][0]=='-'; argc--,argv++) {
         c++;
