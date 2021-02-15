@@ -1,4 +1,4 @@
-for Tom 2 Gusty
+fork Tom 2 Gusty
 printprocs
 Kill Tom
 printprocs
