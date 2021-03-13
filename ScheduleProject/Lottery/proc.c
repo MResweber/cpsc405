@@ -6,11 +6,14 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h> //added h file for time
 #include "types.h"
 #include "defs.h"
 #include "proc.h"
 
 static void wakeup1(int chan);
+
+int nTickets = 0;
 
 // Dummy lock routines. Not needed for lab
 void acquire(int *p) {
@@ -92,6 +95,9 @@ found:
   p->context->pc = (uint)forkret;
   p->context->lr = (uint)trapret;
 
+  // made it so it defualts ot 1 ticket a process.
+  p->tickets = 1;
+  nTickets += 1;
   return p;
 }
 
@@ -297,25 +303,23 @@ Kill(int pid)
 void
 scheduler(void)
 {
-// A continous loop in real code
-//  if(first_sched) first_sched = 0;
-//  else sti();
+// Changed this to the algorithm for the lottery scheduler
 
   curr_proc->state = RUNNABLE;
 
   struct proc *p;
+  int currentTickets = (rand() % nTickets) + 1;
 
-  acquire(&ptable.lock);
-  for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
-    if(p == curr_proc || p->state != RUNNABLE)
-      continue;
-
-    // Switch to chosen process.
-    curr_proc = p;
-    p->state = RUNNING;
-    break;
+  for(p = ptable.proc; p < &ptable.proc[NPROC]; p++) {
+    if (p->state == RUNNABLE) {
+      currentTickets -= p->tickets;
+    }
+    if(currentTickets <= 0) {
+      curr_proc = p;
+      p->state = RUNNING;
+      break;
+    }
   }
-  release(&ptable.lock);
 
 }
 
@@ -329,7 +333,60 @@ procdump(void)
 
   for(p = ptable.proc; p < &ptable.proc[NPROC]; p++)
     if(p->pid > 0)
-      printf("pid: %d, parent: %d state: %s\n", p->pid, p->parent == 0 ? 0 : p->parent->pid, procstatep[p->state]);
+      printf("pid: %d, parent: %d state: %s tickets: %d\n", p->pid, p->parent == 0 ? 0 : p->parent->pid, procstatep[p->state], p->tickets);
 }
 
 
+// Allowed for creation of processes with diffrent ticket values
+static struct proc*
+allocproctick(int t)
+{
+  struct proc *p;
+
+  for(p = ptable.proc; p < &ptable.proc[NPROC]; p++)
+    if(p->state == UNUSED)
+      goto found;
+  return 0;
+
+found:
+  p->state = EMBRYO;
+  p->pid = nextpid++;
+
+  p->context = (struct context*)malloc(sizeof(struct context));
+  memset(p->context, 0, sizeof *p->context);
+  p->context->pc = (uint)forkret;
+  p->context->lr = (uint)trapret;
+
+  // made it so it defualts ot 1 ticket a process.
+  p->tickets = t;
+  nTickets += t;
+  return p;
+}
+
+
+// Allowed for creation of processes with diffrent ticket values
+int
+Forktick(int fork_proc_id, int t)
+{
+  int pid;
+  struct proc *np, *fork_proc;
+
+  // Find current proc
+  if ((fork_proc = findproc(fork_proc_id)) == 0)
+    return -1;
+
+  // Allocate process.
+  if((np = allocproctick(t)) == 0)
+    return -1;
+
+  // Copy process state from p.
+  np->sz = fork_proc->sz;
+  np->parent = fork_proc;
+  // Copy files in real code
+  strcpy(np->cwd, fork_proc->cwd);
+ 
+  pid = np->pid;
+  np->state = RUNNABLE;
+  strcpy(np->name, fork_proc->name);
+  return pid;
+}

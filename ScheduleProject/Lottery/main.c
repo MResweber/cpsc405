@@ -7,6 +7,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <errno.h>
+#include <time.h>
 #include "types.h"
 #include "defs.h"
 #include "proc.h"
@@ -30,6 +31,7 @@ int local_scheduler() {
 
 int main()
 {
+    srand(time(0));
     pinit(); // initialize process table
     curr_proc_id = userinit(); // create first user process
     char cmd[MAX_COMMAND_LENGTH + 1];
@@ -63,6 +65,7 @@ void parseCmd(char* cmd, char** params, int *nparams)
 int executeCmd(char** params, int nparams)
 {
     int pid, rc = 1, chan;
+    int fpid;
     int ncmds = sizeof(cmdstr) / sizeof(char *);
     int cmd_index;
     for (cmd_index = 0; cmd_index < ncmds; cmd_index++)
@@ -75,11 +78,18 @@ int executeCmd(char** params, int nparams)
     
     switch (cmd_index) {
     case FORK:
-        if (nparams > 1)
+        if (nparams == 2) {
             pid = atoi(params[1]);
-        else
-            pid = curr_proc->pid;
-        int fpid = Fork(pid);
+            fpid = Fork(pid);
+        }
+        else if (nparams > 2) {
+            pid = atoi(params[1]);
+            int tickets = atoi(params[2]);
+            fpid = Forktick(pid, tickets);
+        }
+        else {
+            fpid = Fork(curr_proc->pid);
+        }
         printf("pid: %d forked: %d\n", pid, fpid);
         break;
     case SETPID:

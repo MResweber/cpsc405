@@ -1,0 +1,5 @@
+fork
+fork 2
+fork 1 5
+fork 2 78
+ps
