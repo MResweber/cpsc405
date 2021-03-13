@@ -77,7 +77,7 @@ findproc(int pid)
 // state required to run in the kernel.
 // Otherwise return 0.
 static struct proc*
-allocproc(void)
+allocproc(int tickets)
 {
   struct proc *p;
 
@@ -96,8 +96,8 @@ found:
   p->context->lr = (uint)trapret;
 
   // made it so it defualts ot 1 ticket a process.
-  p->tickets = 1;
-  nTickets += 1;
+  p->tickets = tickets;
+  nTickets += tickets;
   return p;
 }
 
@@ -106,7 +106,7 @@ int
 userinit(void)
 {
   struct proc *p;
-  p = allocproc();
+  p = allocproc(1);
   initproc = p;
   p->sz = PGSIZE;
   strcpy(p->cwd, "/");
@@ -120,7 +120,7 @@ userinit(void)
 // Sets up stack to return as if from system call.
 // Caller must set state of returned proc to RUNNABLE.
 int
-Fork(int fork_proc_id)
+Fork(int fork_proc_id, int tickets)
 {
   int pid;
   struct proc *np, *fork_proc;
@@ -130,7 +130,7 @@ Fork(int fork_proc_id)
     return -1;
 
   // Allocate process.
-  if((np = allocproc()) == 0)
+  if((np = allocproc(tickets)) == 0)
     return -1;
 
   // Copy process state from p.
@@ -336,57 +336,3 @@ procdump(void)
       printf("pid: %d, parent: %d state: %s tickets: %d\n", p->pid, p->parent == 0 ? 0 : p->parent->pid, procstatep[p->state], p->tickets);
 }
 
-
-// Allowed for creation of processes with diffrent ticket values
-static struct proc*
-allocproctick(int t)
-{
-  struct proc *p;
-
-  for(p = ptable.proc; p < &ptable.proc[NPROC]; p++)
-    if(p->state == UNUSED)
-      goto found;
-  return 0;
-
-found:
-  p->state = EMBRYO;
-  p->pid = nextpid++;
-
-  p->context = (struct context*)malloc(sizeof(struct context));
-  memset(p->context, 0, sizeof *p->context);
-  p->context->pc = (uint)forkret;
-  p->context->lr = (uint)trapret;
-
-  // made it so it defualts ot 1 ticket a process.
-  p->tickets = t;
-  nTickets += t;
-  return p;
-}
-
-
-// Allowed for creation of processes with diffrent ticket values
-int
-Forktick(int fork_proc_id, int t)
-{
-  int pid;
-  struct proc *np, *fork_proc;
-
-  // Find current proc
-  if ((fork_proc = findproc(fork_proc_id)) == 0)
-    return -1;
-
-  // Allocate process.
-  if((np = allocproctick(t)) == 0)
-    return -1;
-
-  // Copy process state from p.
-  np->sz = fork_proc->sz;
-  np->parent = fork_proc;
-  // Copy files in real code
-  strcpy(np->cwd, fork_proc->cwd);
- 
-  pid = np->pid;
-  np->state = RUNNABLE;
-  strcpy(np->name, fork_proc->name);
-  return pid;
-}

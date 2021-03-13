@@ -65,7 +65,7 @@ void parseCmd(char* cmd, char** params, int *nparams)
 int executeCmd(char** params, int nparams)
 {
     int pid, rc = 1, chan;
-    int fpid;
+    int tickets = 1;
     int ncmds = sizeof(cmdstr) / sizeof(char *);
     int cmd_index;
     for (cmd_index = 0; cmd_index < ncmds; cmd_index++)
@@ -78,18 +78,15 @@ int executeCmd(char** params, int nparams)
     
     switch (cmd_index) {
     case FORK:
-        if (nparams == 2) {
+        if (nparams == 2)
             pid = atoi(params[1]);
-            fpid = Fork(pid);
-        }
         else if (nparams > 2) {
             pid = atoi(params[1]);
-            int tickets = atoi(params[2]);
-            fpid = Forktick(pid, tickets);
+            tickets = atoi(params[2]);
         }
-        else {
-            fpid = Fork(curr_proc->pid);
-        }
+        else
+            pid = curr_proc->pid;
+        int fpid = Fork(pid, tickets);
         printf("pid: %d forked: %d\n", pid, fpid);
         break;
     case SETPID:

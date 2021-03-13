@@ -7,8 +7,7 @@ struct proc;
 
 // proc.c
 int             Exit(int);
-int             Fork(int);
-int             Forktick(int, int);
+int             Fork(int, int);
 int             Kill(int);
 void            pinit(void);
 void            procdump(void);
