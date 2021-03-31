@@ -15,6 +15,8 @@ static char *cmd_words[CMDWORDS];   // words on line pointed to by cmd_words[]
 static int num_words = 0;           // number of words on cmd line
 static int redirect = 0;            // tracks direction of redirect, -1 is input, 0 is none, and 1 is output
 static char *redirectTar;           // holds target of redirect
+static int pip = 0;
+static char *pipeCmd;
 
 /*
  * signal handler for CTL-C
@@ -52,21 +54,32 @@ int exit_cmd() {
     return 0;
 }
 
+void check_pipe(char *cmd) {
+    pip = 0;
+    char *temp;
+    temp = strtok(cmd, "|");
+    temp = strtok(NULL, "|");
+    if (temp != NULL) {
+        pip = 1;
+        pipeCmd = temp+1;
+        printf("Piping from %s to %s\n", line, pipeCmd);
+    }
+}
 /* 
  * Checks if the cmd line has a redirct in it
  * if it does then it sets it to redirect
  */
-void check_redirect() {
+void check_redirect(char *cmd) {
     redirect = 0;
     char *temp;
-    temp = strtok (line, ">");
+    temp = strtok (cmd, ">");
     temp = strtok (NULL, ">");
     if (temp != NULL) {
         redirect = 1;
         redirectTar = temp+1;
         return;
     }
-    temp = strtok (line, "<");
+    temp = strtok (cmd, "<");
     temp = strtok (NULL, "<");
     if (temp != NULL) {
         redirect = -1;
@@ -79,11 +92,11 @@ void check_redirect() {
  * num_words assigned the number of words on the line
  * returns 0 for line without command
  */
-int get_cmd_words() {
+int get_cmd_words(char *cmd) {
     // Collect words on line into cmd_words
     num_words = 0;
     char *p;
-    p = strtok(line, DELIMETERS);               // strtok() returns pointer to word on line
+    p = strtok(cmd, DELIMETERS);               // strtok() returns pointer to word on line
     while (p != NULL) {                         // p has address in line, e.g., &line[0]
         cmd_words[num_words] = p;               // cmd_words[] points to words on line
         num_words++;                            // count words on line
@@ -103,9 +116,10 @@ int main() {
             break;                              // fgets returns LF at end of string
         line[strcspn(line, "\n")] = '\0';       // trim lf from line
 
-        check_redirect();                       // Check if there is a redirect
+        check_pipe(line);
+        check_redirect(line);                   // Check if there is a redirect
         if (cd_cmd() || exit_cmd() || 
-                !get_cmd_words())               // if cd or a blank line
+                !get_cmd_words(line))           // if cd or a blank line
             continue;
 
         if (fork() == 0) {
