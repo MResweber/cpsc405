@@ -13,6 +13,8 @@ static char line[BUFSZ];            // cmd line read into line[]
 static char *cmd_words[CMDWORDS];   // words on line pointed to by cmd_words[]
                                     // addresses in cmd_words are &line[6] for example
 static int num_words = 0;           // number of words on cmd line
+static int redirect = 0;            // tracks direction of redirect, -1 is input, 0 is none, and 1 is output
+static char *redirectTar;           // holds target of redirect
 
 /*
  * signal handler for CTL-C
@@ -50,6 +52,29 @@ int exit_cmd() {
     return 0;
 }
 
+/* 
+ * Checks if the cmd line has a redirct in it
+ * if it does then it sets it to redirect
+ */
+void check_redirect() {
+    redirect = 0;
+    char *temp;
+    temp = strtok (line, ">");
+    temp = strtok (NULL, ">");
+    if (temp != NULL) {
+        redirect = 1;
+        redirectTar = temp;
+        printf("Redirecting output to %s\n", redirectTar);
+        return;
+    }
+    temp = strtok (line, "<");
+    temp = strtok (NULL, "<");
+    if (temp != NULL) {
+        redirect = -1;
+        redirectTar = temp;
+        printf("Redirecting input to %s\n", redirectTar);
+    }
+}
 /*
  * Separates line into words on line
  * For each word on line, cmd_words[] points to the word.
@@ -79,11 +104,12 @@ int main() {
         if (fgets(line, BUFSZ, stdin) == 0)     // CTL-D terminates shell
             break;                              // fgets returns LF at end of string
         line[strcspn(line, "\n")] = '\0';       // trim lf from line
+        check_redirect();
         if (cd_cmd() || exit_cmd() || 
                 !get_cmd_words())               // if cd or a blank line
             continue;
         if (fork() == 0) {
-            //execvp(cmd_words[0], cmd_words);        
+            execvp(cmd_words[0], cmd_words);        
             cmd_not_found(cmd_words[0]);        // Successful execvp() does not return
         }
         wait(NULL);
