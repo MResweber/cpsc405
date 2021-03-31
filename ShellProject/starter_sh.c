@@ -63,16 +63,14 @@ void check_redirect() {
     temp = strtok (NULL, ">");
     if (temp != NULL) {
         redirect = 1;
-        redirectTar = temp;
-        printf("Redirecting output to %s\n", redirectTar);
+        redirectTar = temp+1;
         return;
     }
     temp = strtok (line, "<");
     temp = strtok (NULL, "<");
     if (temp != NULL) {
         redirect = -1;
-        redirectTar = temp;
-        printf("Redirecting input to %s\n", redirectTar);
+        redirectTar = temp+1;
     }
 }
 /*
@@ -104,11 +102,18 @@ int main() {
         if (fgets(line, BUFSZ, stdin) == 0)     // CTL-D terminates shell
             break;                              // fgets returns LF at end of string
         line[strcspn(line, "\n")] = '\0';       // trim lf from line
-        check_redirect();
+
+        check_redirect();                       // Check if there is a redirect
         if (cd_cmd() || exit_cmd() || 
                 !get_cmd_words())               // if cd or a blank line
             continue;
+
         if (fork() == 0) {
+            if (redirect != 0) {
+                int rdfd = open(redirectTar, O_RDWR);
+                if (redirect == 1) dup2(rdfd, 1);
+                else dup2 (rdfd, 0);
+            }
             execvp(cmd_words[0], cmd_words);        
             cmd_not_found(cmd_words[0]);        // Successful execvp() does not return
         }
