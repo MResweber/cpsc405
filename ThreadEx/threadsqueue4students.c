@@ -80,8 +80,7 @@ void *worker2(void *arg) {
 }
 
 int
-main(int argc, char *argv[])
-{
+main(int argc, char *argv[]) {
     if (argc != 2) { 
 	fprintf(stderr, "usage: threads <value>\n"); 
 	exit(1); 

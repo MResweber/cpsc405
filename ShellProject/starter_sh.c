@@ -42,6 +42,15 @@ int cd_cmd() {
 }
 
 /*
+ * Checks to see if the cmd is exit, and exits if it is
+ */
+int exit_cmd() {
+    if(line[0] == 'e' && line[1] == 'x' && line[2] == 'i' && line[3] == 't')
+        exit(1);
+    return 0;
+}
+
+/*
  * Separates line into words on line
  * For each word on line, cmd_words[] points to the word.
  * num_words assigned the number of words on the line
@@ -70,10 +79,11 @@ int main() {
         if (fgets(line, BUFSZ, stdin) == 0)     // CTL-D terminates shell
             break;                              // fgets returns LF at end of string
         line[strcspn(line, "\n")] = '\0';       // trim lf from line
-        if (cd_cmd() || !get_cmd_words())       // if cd or a blank line
+        if (cd_cmd() || exit_cmd() || 
+                !get_cmd_words())               // if cd or a blank line
             continue;
         if (fork() == 0) {
-            execvp(cmd_words[0], cmd_words);        
+            //execvp(cmd_words[0], cmd_words);        
             cmd_not_found(cmd_words[0]);        // Successful execvp() does not return
         }
         wait(NULL);
