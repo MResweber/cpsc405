@@ -6,7 +6,7 @@
 #include <string.h>
 #include <fcntl.h>
 
-#define DELIMETERS " \t"            // used by strtok, skips whitespace - spaces and tabs
+#define DELIMETERS " \t"         // used by strtok, skips whitespace - spaces and tabs
 #define BUFSZ 100                   // max size of input line containing commands
 #define CMDWORDS 10                 // max words on command line
 static char line[BUFSZ];            // cmd line read into line[]
@@ -16,7 +16,7 @@ static int num_words = 0;           // number of words on cmd line
 static int redirect = 0;            // tracks direction of redirect, -1 is input, 0 is none, and 1 is output
 static char *redirectTar;           // holds target of redirect
 static int pip = 0;
-static char *pipeCmd;
+static char *pipeCmd[CMDWORDS];
 
 /*
  * signal handler for CTL-C
@@ -54,16 +54,37 @@ int exit_cmd() {
     return 0;
 }
 
+/*
+ * Separates line into words on line
+ * For each word on line, cmd_words[] points to the word.
+ * num_words assigned the number of words on the line
+ * returns 0 for line without command
+ */
+int get_cmd_words(char *cmd, char *array[]) {
+    // Collect words on line into cmd_words
+    num_words = 0;
+    char *p;
+    p = strtok(cmd, DELIMETERS);               // strtok() returns pointer to word on line
+    while (p != NULL) {                         // p has address in line, e.g., &line[0]
+        array[num_words] = p;               // cmd_words[] points to words on line
+        num_words++;                            // count words on line
+        p = strtok(NULL, DELIMETERS);           // get next word on line
+    }
+    array[num_words] = NULL;                // 0 marks end of words in cmd_words
+    return num_words;                           // return num of words found
+}
+
 void check_pipe(char *cmd) {
     pip = 0;
     char *temp;
+    char *pipeLine;
     temp = strtok(cmd, "|");
     temp = strtok(NULL, "|");
     if (temp != NULL) {
         pip = 1;
-        pipeCmd = temp+1;
-        printf("Piping from %s to %s\n", line, pipeCmd);
+        pipeLine = temp+1;
     }
+    get_cmd_words(pipeLine, pipeCmd);
 }
 /* 
  * Checks if the cmd line has a redirct in it
@@ -86,25 +107,6 @@ void check_redirect(char *cmd) {
         redirectTar = temp+1;
     }
 }
-/*
- * Separates line into words on line
- * For each word on line, cmd_words[] points to the word.
- * num_words assigned the number of words on the line
- * returns 0 for line without command
- */
-int get_cmd_words(char *cmd) {
-    // Collect words on line into cmd_words
-    num_words = 0;
-    char *p;
-    p = strtok(cmd, DELIMETERS);               // strtok() returns pointer to word on line
-    while (p != NULL) {                         // p has address in line, e.g., &line[0]
-        cmd_words[num_words] = p;               // cmd_words[] points to words on line
-        num_words++;                            // count words on line
-        p = strtok(NULL, DELIMETERS);           // get next word on line
-    }
-    cmd_words[num_words] = NULL;                // 0 marks end of words in cmd_words
-    return num_words;                           // return num of words found
-}
 
 int main() {
     int num = 1, backgroundrun = 0;             // backgroundrun set to 1 after % ./loop &
@@ -119,10 +121,34 @@ int main() {
         check_pipe(line);
         check_redirect(line);                   // Check if there is a redirect
         if (cd_cmd() || exit_cmd() || 
-                !get_cmd_words(line))           // if cd or a blank line
+                !get_cmd_words(line, cmd_words))           // if cd or a blank line
             continue;
 
-        if (fork() == 0) {
+        
+        if (pip) {
+            int p[2];
+            pipe(p);
+            if (fork() == 0) {
+                if (fork() == 0){
+                    if (redirect == -1) {
+                        int rdfd = open(redirectTar, O_RDWR);
+                        dup2 (rdfd, 1);
+                    }
+                    dup2(p[0], 0);
+                    execvp(pipeCmd[0], pipeCmd);        
+                    cmd_not_found(pipeCmd[0]);
+                }
+                if (redirect == 1) {
+                    int rdfd = open(redirectTar, O_RDWR);
+                    dup2 (rdfd, 0);
+                }
+                dup2(p[1], 1);
+                execvp(cmd_words[0], cmd_words);        
+                cmd_not_found(cmd_words[0]);
+            }
+            wait(NULL);
+        }
+        else if (fork() == 0) {
             if (redirect != 0) {
                 int rdfd = open(redirectTar, O_RDWR);
                 if (redirect == 1) dup2(rdfd, 1);
