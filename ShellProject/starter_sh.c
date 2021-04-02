@@ -129,15 +129,6 @@ int main() {
             int p[2];
             pipe(p);
             if (fork() == 0) {
-                if (fork() == 0){
-                    if (redirect == -1) {
-                        int rdfd = open(redirectTar, O_RDWR);
-                        dup2 (rdfd, 1);
-                    }
-                    dup2(p[0], 0);
-                    execvp(pipeCmd[0], pipeCmd);        
-                    cmd_not_found(pipeCmd[0]);
-                }
                 if (redirect == 1) {
                     int rdfd = open(redirectTar, O_RDWR);
                     dup2 (rdfd, 0);
@@ -146,7 +137,16 @@ int main() {
                 execvp(cmd_words[0], cmd_words);        
                 cmd_not_found(cmd_words[0]);
             }
-            wait(NULL);
+            else if (fork() == 0){
+                if (redirect == -1) {
+                    int rdfd = open(redirectTar, O_RDWR);
+                    dup2 (rdfd, 1);
+                }
+                dup2(p[0], 0);
+                execvp(pipeCmd[0], pipeCmd);        
+                cmd_not_found(pipeCmd[0]);
+            }
+            //else wait(NULL);
         }
         else if (fork() == 0) {
             if (redirect != 0) {
