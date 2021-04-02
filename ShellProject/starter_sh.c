@@ -18,33 +18,37 @@ static int num_words = 0;           // number of words on cmd line
 static int primChild = 0;           // pid for fork for main command
 static int pipeChild = 0;           // pid of fork for pipe
 
-static int redirect = 0;            // tracks direction of redirect, -1 is input, 0 is none, and 1 is output
-static char *redirectTar;           // holds target of redirect
+static int redirectIn = 0;          // tracks whether to redirect input
+static int redirectOut = 0;         // tracks whether to redirect output
+static char *redirectInTar;         // holds target of input redirects
+static char *redirectOutTar;        // holds target of output redirects
 
 static int pip = 0;                 // whether or not to pipe
 static char *pipeCmd[CMDWORDS];     // what command to pipe to
 
-static int backgroundrun = 0;
+static int backgroundrun = 0;       // whether or not the current command is to run in the background
 static struct sigaction ctlC;       // handler for CTL-C
 
 
 /*
  * signal handler for CTL-C
  * CTL-C does not terminate shell, but it does terminate foreground procs
+ * for some reason this terminates the shell if there is no current foreground
+ * proc. I have not been able to figure out why.
  */
 void ctl_C_Handler(int sig) {
+    // Kill the child processes
     if(primChild) kill(primChild, sig);
     if(pipeChild) kill(pipeChild, sig);
+    // set their ids to 0
     primChild = 0;
     pipeChild = 0;
-    if(!primChild) {
-        int pid = getpid();
-        kill(pid, 0);
-    }
 }
 
+/*
+ * initializes the handler for CTL-C
+ */
 int set_handlers () {
-    // initialize the handler for CTL-C
     ctlC.sa_handler = ctl_C_Handler;
     ctlC.sa_flags = 0;
     sigemptyset(&ctlC.sa_mask);
@@ -103,6 +107,11 @@ int get_cmd_words(char *cmd, char *array[]) {
     return num_words;                           // return num of words found
 }
 
+/*
+ * checks wether or not the current cmd has a pipe in it.
+ * if it does, then it saves everything after the pipe to 
+ * pipeCmd, and sets pip to 1.
+ */
 void check_pipe(char *cmd) {
     pip = 0;
     char *temp;
@@ -117,29 +126,61 @@ void check_pipe(char *cmd) {
 }
 
 /* 
- * Checks if the cmd line has a redirct in it
- * if it does then it sets it to redirect
+ * Checks if the cmd line has a redirect in it
+ * if it does then it sets it to redirect.
+ * redirectIn and Out are set to represent the
+ * direction of the redirect, and redirectInTar
+ * and redirectOutTar are set to the target of the 
+ * redirects.
  */
 void check_redirect(char *cmd) {
-    redirect = 0;
+    redirectIn = 0;
+    redirectOut = 0;
     char *temp;
     // Check for output redirect
     temp = strtok (cmd, ">");
     temp = strtok (NULL, ">");
     if (temp != NULL) {
-        redirect = 1;
-        redirectTar = temp+1;
-        return;
+        redirectOut = 1;
+        redirectOutTar = temp+1;
     }
     // Check for input redirect
     temp = strtok (cmd, "<");
     temp = strtok (NULL, "<");
     if (temp != NULL) {
-        redirect = -1;
-        redirectTar = temp+1;
+        redirectIn = -1;
+        redirectInTar = temp+1;
     }
 }
 
+/*
+ * Checks if there is a redirected input, if there is
+ * then it sets the current process to take input from 
+ * the redirectInTar.
+ */
+void redirect_input () {
+    if (redirectIn) {
+        int infd = open(redirectInTar, O_RDONLY);
+        dup2(infd, 0);
+    }
+}
+
+
+/*
+ * Checks if there is a redirected output, if there is
+ * then it sets the current process to take output from 
+ * the redirectOutTar.
+ */
+void redirect_output () {
+    if (redirectOut) {
+        int outfd = open(redirectOutTar, O_WRONLY);
+        dup2(outfd, 1);
+    }
+}
+
+/*
+ * runs the command inside cmd_words in a child process.
+ */
 void run() {
     primChild = fork();
     if (primChild == 0) {
@@ -148,27 +189,29 @@ void run() {
             printf("Pid: %d\n", pid);
             close(1);
         }
-        if (redirect != 0) {
-            int rdfd = open(redirectTar, O_RDWR);
-            if (redirect == 1) dup2(rdfd, 1);
-            else dup2 (rdfd, 0);
-        }
+        redirect_input();
+        redirect_output();
         execvp(cmd_words[0], cmd_words);        
         cmd_not_found(cmd_words[0]);        // Successful execvp() does not return
 
     }
-    if (!backgroundrun) wait(NULL);
+    if (!backgroundrun) waitpid(primChild, NULL, 0);
 }
 
+/*
+ * Runs the command in cmd_words in a seprate fork, and 
+ * and runs the command in pipe_cmd a diffrent fork. The 
+ * pids are saved in primChild and pipeChild repectively.
+ * Addtionally the output in the second command is piped
+ * into the input for the first command.
+ */
 void run_pipe() {
         int p[2];
         pipe(p);
+        // Fork first child, set pipe to output
         primChild = fork();
         if (primChild == 0) {
-            if (redirect == 1) {
-                int rdfd = open(redirectTar, O_RDWR);
-                dup2 (rdfd, 0);
-            }
+            redirect_input();
             dup2(p[1], 1);
             close(p[0]);
             close(p[1]);
@@ -176,12 +219,10 @@ void run_pipe() {
             cmd_not_found(cmd_words[0]);
         }
         else {
+            // fork second child, set pipe to input
             pipeChild = fork();
             if (pipeChild == 0){
-                if (redirect == -1) {
-                    int rdfd = open(redirectTar, O_RDWR);
-                    dup2 (rdfd, 1);
-                }
+                redirect_output();
                 dup2(p[0], 0);
                 close(p[0]);
                 close(p[1]);
@@ -191,11 +232,13 @@ void run_pipe() {
         }
         close(p[0]);
         close(p[1]);
+        // wait until the second child is complete
         waitpid(pipeChild, NULL, WUNTRACED);
 }
 
 int main() {
     int num = 1;
+    // sets up the signal handler for CTL-C
     if (set_handlers()) exit(1);
     while(1) {
         primChild = 0;
@@ -204,16 +247,19 @@ int main() {
         memset(line, 0, BUFSZ);                 // Zero line before each use
         fprintf(stdout, "mysh%d %% ", num);     // display prompt
         fflush(stdout);                         // flush prompt to terminal
-        if (fgets(line, BUFSZ, stdin) == 0)     // CTL-D terminates shell
+        if (fgets(line, BUFSZ, stdin) == 0) {   // CTL-D terminates shell
+            printf ("\n");
             break;                              // fgets returns LF at end of string
+        }
         line[strcspn(line, "\n")] = '\0';       // trim lf from line
 
         check_pipe(line);
-        check_redirect(line);                   // Check if there is a redirect
+        check_redirect(line);                   
         if (cd_cmd() || exit_cmd() || 
                 !get_cmd_words(line, cmd_words))
             continue;
 
+        // Check if set to run in the background
         if (cmd_words[num_words - 1][0] == '&') {
             backgroundrun = 1;
             cmd_words[num_words - 1] = NULL;
