@@ -1,12 +1,12 @@
 typedef struct {
     int cur_msgs;
     int max_msgs;
-    msg *q;
+    struct msg *q;
 } msgq;
 
 typedef struct {
     char *data;
-    msg *next;
+    struct msg *next;
 } msg;
 
 msgq *msgq_init (int num_msgs);
