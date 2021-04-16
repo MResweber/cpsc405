@@ -13,23 +13,23 @@ static char *con1Arr[100];
 static char *con2Arr[100];
 static char *con3Arr[100];
 
-void producer(void *arg) {
+void *producer(void *arg) {
     char *name;
     name = (char *)arg;
     printf("Check thread name: %s\n", name);
-    for (int i = 1; i < 51; i++) {
+    for (int i = 1; i < 6; i++) {
         printf("Check for loop start: %s %d\n", name, i);
         char *data;
         sprintf(data, "Msg:%d: Sent by: %s", i, name);
         printf("Check format data \"%s\", %s\n", data, name);
-        msgq_send(mq2, data);
+        //msgq_send(mq2, data);
         printf("Sent Sucessfully\n");
     }
     printf("End of for loop\n");
     pthread_exit(NULL);
 }
 
-void consumer(void *arg) {
+void *consumer(void *arg) {
     char *name = (char *) arg;
     int i = 0;
     while (msgq_len(mq2) != 0) {
@@ -42,18 +42,21 @@ void consumer(void *arg) {
         i++;
         free(data);
     }
+    pthread_exit(NULL);
 }
 
-void send_test(void *arg) {
+void *send_test(void *arg) {
     printf("Sending test msg\n");
     msgq_send(mq, "Test");
     printf("Msg sent\n");
+    pthread_exit(NULL);
 }
 
-void recv_test(void *arg) {
+void *recv_test(void *arg) {
     printf("Reciveing test msg\n");
     char *data = msgq_recv(mq);
     printf("Msg \"%s\" recieved\n", data);
+    pthread_exit(NULL);
 }
 
 int main(int argc, char *argv[]) {
@@ -125,6 +128,9 @@ int main(int argc, char *argv[]) {
     //pthread_create(&pro2, &joinable, producer, (void *)pro2arg);
     //printf("Check thread 2\n");
     pthread_attr_destroy(&joinable);
+    printf("Destroyed attribute\n");
+
+    // Wait for the threads to return
     pthread_join(pro1, NULL);
     printf("Check thread 1 join\n");
     //pthread_join(pro2, NULL);

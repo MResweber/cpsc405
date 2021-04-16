@@ -33,13 +33,13 @@ msgq *msgq_init(int num_msgs) {
 int msgq_send(msgq *mq, char *m) {
     // Wait if the queue is full
     sem_wait (&mq->full);
-
+    sem_wait(&mq->mutex);
+    
     // Assign the data to the heap.
     msg *new_msg = malloc(sizeof(msg));
     new_msg->data = m;
     new_msg->next = NULL;
 
-    sem_wait(&mq->mutex);                   // Start of critical region
     // Check if the queue is empty if it is jest add the message to the start
     if (mq->q == NULL) {
         mq->q = new_msg;
@@ -68,14 +68,16 @@ int msgq_send(msgq *mq, char *m) {
 char *msgq_recv(msgq *mq) {
     // wait if the queue is empty
     sem_wait (&mq->empty);
+    sem_wait(&mq->mutex);
 
     // Take the message from the front of the queue
     msg *m = mq->q;
     mq->q = mq->q->next;
-    sem_post(&mq->full);
 
     char *result = m->data;
     free(m);
+    sem_post(&mq->mutex);
+    sem_post(&mq->full);
     return result;
 }
 
@@ -84,12 +86,13 @@ char *msgq_recv(msgq *mq) {
  */
 int msgq_len(msgq *mq) {
     int result = 0;
+    sem_wait(&mq->mutex);
     msg *curr = mq->q;
     while (curr != NULL){
         result++;
         curr = curr->next;
     }
-    
+    sem_post(&mq->mutex);
     return result;
 }
 
@@ -97,9 +100,11 @@ int msgq_len(msgq *mq) {
  * Prints all messages to stdout
  */
 void msgq_show(msgq *mq) {
+    sem_wait(&mq->mutex);
     msg *cur_msg = mq->q;
     while (cur_msg != NULL) {
         printf("%s\n", cur_msg->data);
         cur_msg = cur_msg->next;
     }
+    sem_post(&mq->mutex);
 }
