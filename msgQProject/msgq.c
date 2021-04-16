@@ -20,6 +20,10 @@ msgq *msgq_init(int num_msgs) {
     sem_t tempFull;
     sem_init(&tempFull, 0, num_msgs);
     mq->full = tempFull;
+    
+    sem_t tempMutex;
+    sem_init(&tempMutex, 0, 1);
+    mq->mutex = tempMutex;
     return mq;
 }
 
@@ -35,11 +39,13 @@ int msgq_send(msgq *mq, char *m) {
     new_msg->data = m;
     new_msg->next = NULL;
 
+    sem_wait(&mq->mutex);                   // Start of critical region
     // Check if the queue is empty if it is jest add the message to the start
     if (mq->q == NULL) {
         mq->q = new_msg;
         sem_post(&mq->empty);
-        return 1;
+        sem_post(&mq->mutex);
+        return 1;                           // End of critical region
     }
 
     // Find the end of the queue
@@ -50,6 +56,7 @@ int msgq_send(msgq *mq, char *m) {
 
     // Add msg to the end of the queue
     cur->next = new_msg;
+    sem_post(&mq->mutex);                   // End of critical region
     sem_post(&mq->empty);
 
     return 1;
