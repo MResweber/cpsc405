@@ -1,20 +1,20 @@
 #include <semaphore.h>
 
 typedef struct {
-    char *data;
-    struct msg *next;
+    char *data;         // Data of the message
+    struct msg *next;   // Next Message in the list
 } msg;
 
-typedef struct {
-    int cur_msgs;
-    int max_msgs;
-    msg *q;
-    sem_t full;
-    sem_t empty;
+typedef struct {    
+    int cur_msgs;       // Current number of messages in queue
+    int max_msgs;       // Maximum number of messages in queue
+    msg *q;             // Start of lniked list for queue
+    sem_t full;         // Semaphore used to mark the queue as full
+    sem_t empty;        // Semaphore used to mark the queue as full
 } msgq;
 
 msgq *msgq_init (int num_msgs);
 int msgq_send(msgq *mq, char *msg);
 char *msgq_recv(msgq *mq);
-int msgq_len(msgq *q);
+int msgq_len(msgq *mq);
 void msgq_show(msgq *mq);

@@ -41,8 +41,9 @@ int msgq_send(msgq *mq, char *m) {
         mq->q = new_msg;
         mq->cur_msgs++;
         sem_post(&mq->empty);
+        return 1;
     }
-    
+
     // Find the end of the queue
     msg *cur = mq->q;
     while (cur->next != NULL) {
@@ -75,4 +76,22 @@ char *msgq_recv(msgq *mq) {
     char *result = m->data;
     free(m);
     return result;
+}
+
+/*
+ * Returns number of messages in queue
+ */
+int msgq_len(msgq *mq) {
+    return mq->cur_msgs;
+}
+
+/*
+ * Prints all messages to stdout
+ */
+void msgq_show(msgq *mq) {
+    msg *cur_msg = mq->q;
+    while (cur_msg != NULL) {
+        printf("%s\n", cur_msg->data);
+        cur_msg = cur_msg->next;
+    }
 }
