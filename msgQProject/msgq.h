@@ -1,13 +1,17 @@
-typedef struct {
-    int cur_msgs;
-    int max_msgs;
-    struct msg *q;
-} msgq;
+#include <semaphore.h>
 
 typedef struct {
     char *data;
     struct msg *next;
 } msg;
+
+typedef struct {
+    int cur_msgs;
+    int max_msgs;
+    msg *q;
+    sem_t full;
+    sem_t empty;
+} msgq;
 
 msgq *msgq_init (int num_msgs);
 int msgq_send(msgq *mq, char *msg);
