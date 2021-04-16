@@ -43,8 +43,8 @@ int msgq_send(msgq *mq, char *m) {
     // Check if the queue is empty if it is jest add the message to the start
     if (mq->q == NULL) {
         mq->q = new_msg;
-        sem_post(&mq->empty);
         sem_post(&mq->mutex);
+        sem_post(&mq->empty);
         return 1;                           // End of critical region
     }
 

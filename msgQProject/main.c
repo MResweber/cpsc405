@@ -106,23 +106,30 @@ int main(int argc, char *argv[]) {
     */
     printf("#######-Producer/Consumer Test-########\n");
     printf("Start\n");
+
+    // Create new attribute for the threads
     pthread_attr_t joinable;
     pthread_attr_init(&joinable);
     pthread_attr_setdetachstate(&joinable, PTHREAD_CREATE_JOINABLE);
+
+    // Create new msgq to prevent any issues from using the previous one
     mq2 = msgq_init(100);
+
+    // Create threads. Currently thread 2 is commented out to isolate problem
     char *pro1arg = "pro1";
-    char *pro2arg = "pro2";
+    //char *pro2arg = "pro2";
     pthread_t pro1;
-    pthread_t pro2;
+    //pthread_t pro2;
     pthread_create(&pro1, &joinable, producer, (void *)pro1arg);
     printf("Check thread 1\n");
-    pthread_create(&pro2, &joinable, producer, (void *)pro2arg);
-    printf("Check thread 2\n");
+    //pthread_create(&pro2, &joinable, producer, (void *)pro2arg);
+    //printf("Check thread 2\n");
     pthread_attr_destroy(&joinable);
     pthread_join(pro1, NULL);
     printf("Check thread 1 join\n");
-    pthread_join(pro2, NULL);
-    printf("Check thread 2 join\n");
+    //pthread_join(pro2, NULL);
+    //printf("Check thread 2 join\n");
+
     msgq_show(mq2);
     pthread_exit(NULL);
 }
