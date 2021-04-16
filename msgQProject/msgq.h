@@ -6,8 +6,6 @@ typedef struct {
 } msg;
 
 typedef struct {    
-    int cur_msgs;       // Current number of messages in queue
-    int max_msgs;       // Maximum number of messages in queue
     msg *q;             // Start of lniked list for queue
     sem_t full;         // Semaphore used to mark the queue as full
     sem_t empty;        // Semaphore used to mark the queue as full

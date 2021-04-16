@@ -11,14 +11,14 @@
  */
 msgq *msgq_init(int num_msgs) {
     msgq *mq = malloc(sizeof(msgq));
-    mq->cur_msgs = 0;
-    mq->max_msgs = num_msgs;
     mq->q = NULL;
+
     sem_t tempEmpty;
     sem_init(&tempEmpty, 0, 0);
     mq->empty = tempEmpty;
+    
     sem_t tempFull;
-    sem_init(&tempFull, 0, 0);
+    sem_init(&tempFull, 0, num_msgs);
     mq->full = tempFull;
     return mq;
 }
@@ -27,19 +27,17 @@ msgq *msgq_init(int num_msgs) {
  * Places m on message queue mq.
  */
 int msgq_send(msgq *mq, char *m) {
-    // Check if queue is full, if it is wait.
-    if(mq->cur_msgs == mq->max_msgs) {
-        sem_wait (&mq->full);
-    }
+    // Wait if the queue is full
+    sem_wait (&mq->full);
 
     // Assign the data to the heap.
     msg *new_msg = malloc(sizeof(msg));
     new_msg->data = m;
+    new_msg->next = NULL;
 
     // Check if the queue is empty if it is jest add the message to the start
     if (mq->q == NULL) {
         mq->q = new_msg;
-        mq->cur_msgs++;
         sem_post(&mq->empty);
         return 1;
     }
@@ -52,7 +50,6 @@ int msgq_send(msgq *mq, char *m) {
 
     // Add msg to the end of the queue
     cur->next = new_msg;
-    mq->cur_msgs++;
     sem_post(&mq->empty);
 
     return 1;
@@ -62,15 +59,12 @@ int msgq_send(msgq *mq, char *m) {
  * Returns a message from the queue
  */
 char *msgq_recv(msgq *mq) {
-    // Check if queue is empty, if it is wait.
-    if(mq->cur_msgs == 0) {
-        sem_wait (&mq->empty);
-    }
+    // wait if the queue is empty
+    sem_wait (&mq->empty);
 
     // Take the message from the front of the queue
     msg *m = mq->q;
     mq->q = mq->q->next;
-    mq->cur_msgs--;
     sem_post(&mq->full);
 
     char *result = m->data;
@@ -82,7 +76,14 @@ char *msgq_recv(msgq *mq) {
  * Returns number of messages in queue
  */
 int msgq_len(msgq *mq) {
-    return mq->cur_msgs;
+    int result = 0;
+    msg *curr = mq->q;
+    while (curr != NULL){
+        result++;
+        curr = curr->next;
+    }
+    
+    return result;
 }
 
 /*
