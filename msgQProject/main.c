@@ -64,16 +64,16 @@ void *consumer(void *arg) {
 }
 
 void *send_test(void *arg) {
-    printf("Sending test msg\n");
+    printf("Sending test message\n");
     msgq_send(mq, "Test");
-    printf("Msg sent\n");
+    printf("Message sent\n");
     pthread_exit(NULL);
 }
 
 void *recv_test(void *arg) {
-    printf("Reciveing test msg\n");
+    printf("Reciveing test message\n");
     char *data = msgq_recv(mq);
-    printf("Msg \"%s\" recieved\n", data);
+    printf("Message \"%s\" received\n", data);
     pthread_exit(NULL);
 }
 
@@ -101,27 +101,35 @@ int main(int argc, char *argv[]) {
     msgq_show(mq);
     
     printf("#######-Testing msgq_send block-#######\n");
+    // Start the test in a seperate thread
     pthread_t sendBlockTest;
     long t = 0;
     pthread_create(&sendBlockTest, NULL, send_test, (void *)t);
+    // Wait 5 seconds while the test is blocked
     for (int i = 1; i < 6; i++) {
         sleep(1);
         printf("%d...\n", i);
     }
+    // Recieve a message to end block
     msgq_recv(mq);
     sleep(1);
     
     printf("#######-Testing msgq_send block-#######\n");
+    // Clear the queue of messages
     while (msgq_len(mq) != 0) {
         msgq_recv(mq);
     }
+    // Confirm that it is empty
     msgq_show(mq);
+    // Start the test in a seperate thread
     pthread_t recvBlockTest;
     pthread_create(&recvBlockTest, NULL, recv_test, (void *)t);
+    // Wait 5 seconds while the test is blocked
     for (int i = 1; i < 6; i++) {
         sleep(1);
         printf("%d...\n", i);
     }
+    // Send a message to end block
     msgq_send(mq, "End Block");
     sleep(1);
     
@@ -159,6 +167,8 @@ int main(int argc, char *argv[]) {
     pthread_join(con2, NULL);
     pthread_join(con3, NULL);
 
+    // Print the contents of each sonsumer static array
+    // This setup is prevent it from attempting to print the NULL pointers
     int i = 0;
     char *curr = con1Arr[0];
     while(curr != NULL) {
