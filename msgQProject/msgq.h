@@ -6,7 +6,7 @@ typedef struct {
 } msg;
 
 typedef struct {    
-    msg *q;             // Start of lniked list for queue
+    msg *msgListStart;             // Start of lniked list for queue
     sem_t full;         // Semaphore used to mark the queue as full
     sem_t empty;        // Semaphore used to mark the queue as full
     sem_t mutex;         // Used for exclusion
