@@ -23,11 +23,14 @@
 int blocks = 10, start_block = 0;
 char filename[100];
 
-void panic();
+void panic(char *s) {
+    printf("%s\n", s);
+    exit(1);
+}
 
 int get_opts(int count, char *args[]) {
     int opt, len, i, good = 1;
-    while (good && (opt = getopt(count, args, "s:l:")) != -1) {
+    while (good && (opt = getopt(count, args, "s:l:i")) != -1) {
         int len, i;
         switch (opt) {
             case 's':
@@ -51,6 +54,10 @@ int get_opts(int count, char *args[]) {
                     }
                 if (good)
                     blocks = atoi(optarg);
+                break;
+            case 'i':
+                start_block = 4;
+                blocks = 4;
                 break;
             case ':':
                 fprintf(stderr, "option missing value\n");

@@ -167,31 +167,13 @@ int main(int argc, char *argv[]) {
         */
 
         // Perform application code
-        int fd1 = tfs_open("GUSTY", TO_CREATE | TO_RDWR, 0);
+        int fd1 = tfs_open("file1", TO_CREATE | TO_RDWR, 0);
         printf("fd1: %d\n", fd1);
-        s = tfs_write(fd1, "COOPER123", 9);
-        printf("tfs_write bytes: %d\n", s);
-        int fd2 = tfs_open("HELLOWORLD", TO_CREATE | TO_RDWR, 0);
-        printf("fd2: %d\n", fd2);
-        s = tfs_write(fd2, "HELLO TO EVERYONE IN the world! Happy New Years!", 48);
-        printf("tfs_write bytes: %d\n", s);
-        s = tfs_write(fd2, "Writing data to another file. 123456789abcdefgh!", 48);
-        printf("tfs_write bytes: %d\n", s);
-        int fd3 = tfs_open("Another", TO_CREATE | TO_RDWR, 0);
-        printf("fd3: %d\n", fd3);
-        s = tfs_write(fd3, "Writing data to another file. 123456789abcdefgh!", 48);
-        printf("tfs_write bytes: %d\n", s);
-
-        int fd4 = tfs_open("MyFile", TO_CREATE | TO_RDWR, 0);
-        printf("fd4: %d\n", fd4);
-        s = tfs_write(fd4, "Writing data to my file. ZYXWVUTSRQPONMLKJIHGFED", 48);
+        s = tfs_write(fd1, "Test", 5);
         printf("tfs_write bytes: %d\n", s);
 
 
         tfs_close(fd1);
-        tfs_close(fd2);
-        tfs_close(fd3);
-        tfs_close(fd4);
         
         // Write file info back to TDD and close TFS
         writefsinfo();
@@ -222,15 +204,10 @@ int main(int argc, char *argv[]) {
         // Perform application code
         char buffer[512];
         strcpy(buffer, "sometext");
-        int fd3 = tfs_open("Another", TO_RDONLY, 0);
-        printf("fd3: %d\n", fd3);
-        s = tfs_read(fd3, buffer, 19); 
-        printf("tfs_read bytes: fd: %d, bytes read: %d value read: %s\n", fd3, s, buffer);
-
-        int fd4 = tfs_open("MyFile", TO_RDONLY, 0);
-        printf("fd4: %d\n", fd4);
-        s = tfs_read(fd4, buffer, 47);
-        printf("tfs_read bytes: fd: %d, bytes read: %d value read: %s\n", fd4, s, buffer);
+        int fd1 = tfs_open("file1", TO_RDONLY, 0);
+        printf("fd3: %d\n", fd1);
+        s = tfs_read(fd1, buffer, 5); 
+        printf("tfs_read bytes: fd: %d, bytes read: %d value read: %s\n", fd1, s, buffer);
 
 
         // Write file info back to TDD and close TFS
